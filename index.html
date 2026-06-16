@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Ruta Redoma Los Curos | Mérida, Venezuela</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7f8;
+    }
+
+    header {
+      background: #2e7d32;
+      color: white;
+      text-align: center;
+      padding: 16px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 25px;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      font-size: 15px;
+    }
+
+    #mapa {
+      width: 100%;
+      height: 88vh;
+      position: relative;
+    }
+
+    .popup-info {
+      max-width: 280px;
+    }
+
+    .popup-info h3 {
+      margin: 0 0 8px;
+      color: #2e7d32;
+      font-size: 18px;
+    }
+
+    .popup-info p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+
+    .popup-info strong {
+      color: #1b5e20;
+    }
+
+    .foto-popup {
+      width: 100%;
+      max-width: 260px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin: 8px 0;
+      display: block;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    .leaflet-routing-container {
+      display: none;
+    }
+
+    .marcador {
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 3px solid white;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .marcador span {
+      transform: rotate(45deg);
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .inicio { background: #2ecc71; }
+    .parada { background: #e91e63; }
+    .destino { background: #d32f2f; }
+    .redoma { background: #ff9800; }
+
+    .leyenda {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .leyenda h4 {
+      margin: 0 0 8px;
+      color: #2e7d32;
+      font-size: 16px;
+    }
+
+    .item-leyenda {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0;
+    }
+
+    .mini-marcador {
+      width: 15px;
+      height: 15px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      display: inline-block;
+    }
+
+    .mini-inicio { background: #2ecc71; }
+    .mini-parada { background: #e91e63; }
+    .mini-destino { background: #d32f2f; }
+    .mini-redoma { background: #ff9800; }
+
+    .linea-ruta {
+      width: 32px;
+      height: 5px;
+      background: #1565c0;
+      display: inline-block;
+      border-radius: 4px;
+    }
+
+    /* Contenedor superior con dos filas */
+    .contenedor-superior {
+      position: absolute;
+      top: 15px;
+      left: 55px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .contenedor-actividades,
+    .contenedor-rutas {
+      background: white;
+      padding: 8px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-ruta,
+    .btn-actividad {
+      padding: 10px 18px;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-fullday { background: #2e7d32; }
+    .btn-fullday:hover { background: #1b5e20; }
+    .btn-fullday.activo {
+      background: #2e7d32;
+      border-color: #1b5e20;
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.3);
+    }
+
+    .btn-campamento { background: #7b1fa2; }
+    .btn-campamento:hover { background: #4a148c; }
+    .btn-campamento.activo {
+      background: #7b1fa2;
+      border-color: #4a148c;
+      box-shadow: 0 0 0 3px rgba(123, 31, 162, 0.3);
+    }
+
+    .btn-ida { background: #1565c0; }
+    .btn-ida:hover { background: #0d47a1; }
+    .btn-ida.activo {
+      background: #1565c0;
+      border-color: #0d47a1;
+      box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.3);
+    }
+
+    .btn-retorno { background: #e65100; }
+    .btn-retorno:hover { background: #bf360c; }
+    .btn-retorno.activo {
+      background: #e65100;
+      border-color: #bf360c;
+      box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.3);
+    }
+
+    .btn-ruta.inactivo,
+    .btn-actividad.inactivo {
+      background: #bdbdbd;
+      color: #424242;
+    }
+
+    /* Panel de ruta simplificado */
+    .panel-ruta {
+      position: absolute;
+      bottom: 20px;
+      left: 15px;
+      z-index: 1000;
+      background: white;
+      padding: 14px 18px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      font-size: 15px;
+      font-weight: bold;
+      min-width: 200px;
+    }
+
+    .panel-ruta h4 {
+      margin: 0 0 8px;
+      color: #2e7d32;
+      font-size: 14px;
+      border-bottom: 2px solid #2e7d32;
+      padding-bottom: 4px;
+    }
+
+    #distanciaRuta,
+    #tiempoRuta {
+      cursor: pointer;
+      transition: 0.3s;
+      margin: 8px 0;
+    }
+
+    #distanciaRuta:hover,
+    #tiempoRuta:hover {
+      transform: scale(1.08);
+    }
+
+    .btn-animar {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: #2e7d32;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-animar:hover {
+      background: #1b5e20;
+    }
+
+    .btn-animar.pausa {
+      background: #d32f2f;
+    }
+
+    .btn-animar.pausa:hover {
+      background: #b71c1c;
+    }
+
+    /* Caminante animado */
+    .caminante-icono {
+      font-size: 28px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      animation: caminar 0.5s infinite alternate;
+    }
+
+    @keyframes caminar {
+      from { transform: translateY(0); }
+      to { transform: translateY(-3px); }
+    }
+
+    /* Ajustes para teléfonos */
+    @media (max-width: 600px) {
+      header { padding: 12px 8px; }
+      header h1 { font-size: 18px; line-height: 1.3; }
+      header p { font-size: 13px; }
+      #mapa { height: calc(100vh - 76px); }
+
+      .contenedor-superior {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .contenedor-actividades,
+      .contenedor-rutas {
+        padding: 6px;
+        gap: 6px;
+      }
+
+      .btn-ruta,
+      .btn-actividad {
+        padding: 8px 12px;
+        font-size: 12px;
+        flex: 1;
+        justify-content: center;
+      }
+
+      .panel-ruta {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        min-width: auto;
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      .popup-info { width: 100%; max-width: 260px; }
+      .popup-info h3 { font-size: 16px; }
+      .popup-info p { font-size: 13px; }
+      .foto-popup { width: 100%; max-width: 100%; height: auto; max-height: 180px; object-fit: contain; }
+      .leyenda { font-size: 12px; padding: 8px; max-width: 180px; }
+      .leyenda h4 { font-size: 14px; }
+      .item-leyenda { gap: 6px; margin: 3px 0; }
+      .marcador { width: 30px; height: 30px; }
+      .marcador span { font-size: 12px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Ruta Redoma Los Curos</h1>
+    <p>Mérida, Venezuela · Sector Los Curos</p>
+  </header>
+
+  <div id="mapa">
+    <!-- Contenedor superior con dos filas -->
+    <div class="contenedor-superior">
+      <!-- Selector de actividades -->
+      <div class="contenedor-actividades">
+        <button id="btnFullday" class="btn-actividad btn-fullday activo" onclick="cambiarActividad('fullday')">
+          🏞️ Fullday
+        </button>
+        <button id="btnCampamento" class="btn-actividad btn-campamento inactivo" onclick="cambiarActividad('campamento')">
+          ⛺ Campamento
+        </button>
+      </div>
+
+      <!-- Selector de ida/retorno -->
+      <div class="contenedor-rutas">
+        <button id="btnIda" class="btn-ruta btn-ida activo" onclick="cargarRuta('ida')">
+          ➡️ Ida
+        </button>
+        <button id="btnRetorno" class="btn-ruta btn-retorno inactivo" onclick="cargarRuta('retorno')">
+          ⬅️ Retorno
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel de información de la ruta -->
+    <div class="panel-ruta">
+      <h4 id="tituloPanel">🏞️ Fullday</h4>
+      <div id="distanciaRuta">🚶 Distancia: -- km</div>
+      <div id="tiempoRuta">⏰ Tiempo: -- min</div>
+      <button id="btnAnimar" class="btn-animar" onclick="toggleAnimacion()">
+        ▶️ <span id="textoAnimar">Iniciar caminata</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+  <script>
+    const mapa = L.map('mapa').setView([8.580, -71.210], 14);
+
+    // ---------------------------------------------------------
+    // CAPA SATÉLITE CON ETIQUETAS (como Google Maps)
+    // ---------------------------------------------------------
+    const capaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri',
+      maxZoom: 19
+    }).addTo(mapa);
+
+    const capaEtiquetas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '',
+      maxZoom: 19
+    }).addTo(mapa);
+
+    function crearIcono(clase, texto) {
+      return L.divIcon({
+        className: "",
+        html: `<div class="marcador ${clase}"><span>${texto}</span></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -34]
+      });
+    }
+
+    const iconoInicio = crearIcono("inicio", "I");
+    const iconoParada1 = crearIcono("parada", "1");
+    const iconoParada2 = crearIcono("parada", "2");
+    const iconoParada3 = crearIcono("parada", "3");
+    const iconoParada4 = crearIcono("parada", "4");
+    const iconoDestino = crearIcono("destino", "F");
+    const iconoRedoma = crearIcono("redoma", "R");
+
+    // PARADAS (siempre visibles en el mapa)
+    const puntos = [
+      {
+        tipo: "Punto de partida",
+        nombre: "Inicio de la ruta",
+        coords: [8.578652, -71.209507],
+        foto: "inicio.png",
+        informacion: "Punto de inicio del recorrido eco-cultural por Los Curos.",
+        icono: iconoInicio
+      },
+      {
+        tipo: "Referencia",
+        nombre: "Redoma Los Curos",
+        coords: [8.579476, -71.209174],
+        foto: "redoma.png",
+        informacion: "Redoma principal de acceso al sector Los Curos.",
+        icono: iconoRedoma
+      },
+      {
+        tipo: "Parada 1",
+        nombre: "Parada 1 Virgen",
+        coords: [8.576872, -71.210396],
+        foto: "virgen.png",
+        informacion: "Primera parada del recorrido.",
+        icono: iconoParada1
+      },
+      {
+        tipo: "Parada 2",
+        nombre: "Parada 2 Café",
+        coords: [8.575239, -71.210965],
+        foto: "cafe.png",
+        informacion: "Segunda parada del recorrido.",
+        icono: iconoParada2
+      },
+      {
+        tipo: "Parada 3",
+        nombre: "Parada 3 Escuela",
+        coords: [8.573584, -71.211244],
+        foto: "escuela.png",
+        informacion: "Tercera parada del recorrido.",
+        icono: iconoParada3
+      },
+      {
+        tipo: "Parada 4",
+        nombre: "Parada 4 Parapente",
+        coords: [8.582769, -71.218238],
+        foto: "parapente.png",
+        informacion: "Cuarta parada del recorrido.",
+        icono: iconoParada4
+      },
+      {
+        tipo: "Destino final",
+        nombre: "Destino de la ruta",
+        coords: [8.588486, -71.217869],
+        foto: "destino.png",
+        informacion: "Punto final del recorrido eco-cultural.",
+        icono: iconoDestino
+      }
+    ];
+
+    // Crear marcadores de paradas
+    puntos.forEach((punto) => {
+      const popupHTML = `
+        <div class="popup-info">
+          <h3>${punto.tipo}: ${punto.nombre}</h3>
+          ${punto.foto ? `<img class="foto-popup" src="${punto.foto}" alt="Foto de ${punto.nombre}" onerror="this.style.display='none'">` : ''}
+          <p><strong>Ubicación:</strong> Mérida, Venezuela · Sector Los Curos</p>
+          <p><strong>Coordenadas:</strong> ${punto.coords[0]}, ${punto.coords[1]}</p>
+          <p><strong>Información:</strong> ${punto.informacion}</p>
+        </div>
+      `;
+
+      L.marker(punto.coords, { icon: punto.icono })
+        .addTo(mapa)
+        .bindPopup(popupHTML, { maxWidth: 300 });
+    });
+
+    // =========================================================
+    // 🏞️ RUTAS FULlDAY
+    // =========================================================
+    const waypointsFulldayIda = [
+      L.latLng(8.578652, -71.209507),  // Inicio
+      L.latLng(8.576872, -71.210396),  // Parada 1 Virgen
+      L.latLng(8.575239, -71.210965),  // Parada 2 Café
+      L.latLng(8.573584, -71.211244),  // Parada 3 Escuela
+      L.latLng(8.582769, -71.218238),  // Parada 4 Parapente
+      L.latLng(8.588486, -71.217869)   // Destino
+    ];
+
+    const waypointsFulldayRetorno = [
+      L.latLng(8.588486, -71.217869),  // destino de la ruta
+      L.latLng(8.582769, -71.218238),  // Parada 4 parapente
+      L.latLng(8.578218, -71.220877),  // punto intermedio
+      L.latLng(8.576751, -71.220713),  // punto intermedio
+      L.latLng(8.575494, -71.219713),  // punto intermedio
+      L.latLng(8.576035, -71.216561),  // punto intermedio
+      L.latLng(8.573645, -71.213265),  // punto intermedio
+      L.latLng(8.573468, -71.211916),  // punto intermedio
+      L.latLng(8.573584, -71.211244),  // Parada 3 escuela
+      L.latLng(8.574983, -71.210744),  // CORREGIDO
+      L.latLng(8.575239, -71.210965),  // Parada 2 café
+      L.latLng(8.576872, -71.210396),  // Parada 1 virgen
+      L.latLng(8.578652, -71.209507),  // inicio de la ruta
+      L.latLng(8.579476, -71.209174)   // redoma los curos
+    ];
+
+    // =========================================================
+    // ⛺ RUTAS CAMPAMENTO (REEMPLAZAR CON TUS COORDENADAS)
+    // =========================================================
+    const waypointsCampamentoIda = [
+      // L.latLng(LAT, LNG),  // Punto 1
+      // L.latLng(LAT, LNG),  // Punto 2
+      // L.latLng(LAT, LNG)   // Destino
+    ];
+
+    const waypointsCampamentoRetorno = [
+      // L.latLng(LAT, LNG),  // Destino
+      // L.latLng(LAT, LNG),  // Punto intermedio
+      // L.latLng(LAT, LNG)   // Inicio
+    ];
+
+    // =========================================================
+    // ⏱️ TIEMPOS REALES MEDIDOS (en minutos)
+    // =========================================================
+    const tiemposReales = {
+      fullday: {
+        ida: 150,       // 2h 30min
+        retorno: 45     // 45 min
+      },
+      campamento: {
+        ida: 0,         // REEMPLAZAR con tu tiempo real (minutos)
+        retorno: 0      // REEMPLAZAR con tu tiempo real (minutos)
+      }
+    };
+
+    // =========================================================
+    // VARIABLES GLOBALES
+    // =========================================================
+    let rutaActual = null;
+    let actividadActual = 'fullday';
+    let tipoActual = 'ida';
+
+    // Variables para la animación del caminante
+    let marcadorCaminante = null;
+    let coordenadasRuta = [];
+    let indiceAnimacion = 0;
+    let intervaloAnimacion = null;
+    let animacionActiva = false;
+    let tiempoTranscurrido = 0;
+    let intervaloReloj = null;
+    let tiempoEstimadoTotal = 0;
+    let distanciaTotal = 0;
+
+    // =========================================================
+    // FUNCIÓN PARA CAMBIAR DE ACTIVIDAD
+    // =========================================================
+    function cambiarActividad(actividad) {
+      actividadActual = actividad;
+
+      const btnFullday = document.getElementById('btnFullday');
+      const btnCampamento = document.getElementById('btnCampamento');
+      const tituloPanel = document.getElementById('tituloPanel');
+
+      if (actividad === 'fullday') {
+        btnFullday.classList.remove('inactivo');
+        btnFullday.classList.add('activo');
+        btnCampamento.classList.remove('activo');
+        btnCampamento.classList.add('inactivo');
+        tituloPanel.textContent = '🏞️ Fullday';
+      } else {
+        btnCampamento.classList.remove('inactivo');
+        btnCampamento.classList.add('activo');
+        btnFullday.classList.remove('activo');
+        btnFullday.classList.add('inactivo');
+        tituloPanel.textContent = '⛺ Campamento';
+      }
+
+      // Cargar la ruta actual (ida o retorno) de la nueva actividad
+      cargarRuta(tipoActual);
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA DETENER LA ANIMACIÓN
+    // =========================================================
+    function detenerAnimacion() {
+      if (intervaloAnimacion) {
+        clearInterval(intervaloAnimacion);
+        intervaloAnimacion = null;
+      }
+      if (intervaloReloj) {
+        clearInterval(intervaloReloj);
+        intervaloReloj = null;
+      }
+      if (marcadorCaminante) {
+        mapa.removeLayer(marcadorCaminante);
+        marcadorCaminante = null;
+      }
+      animacionActiva = false;
+      indiceAnimacion = 0;
+      tiempoTranscurrido = 0;
+
+      const btnAnimar = document.getElementById('btnAnimar');
+      btnAnimar.classList.remove('pausa');
+      btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar caminata</span>';
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA TOGGLE DE ANIMACIÓN
+    // =========================================================
+    function toggleAnimacion() {
+      if (animacionActiva) {
+        pausarAnimacion();
+      } else {
+        iniciarAnimacion();
+      }
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA PAUSAR LA ANIMACIÓN
+    // =========================================================
+    function pausarAnimacion() {
+      if (intervaloAnimacion) {
+        clearInterval(intervaloAnimacion);
+        intervaloAnimacion = null;
+      }
+      if (intervaloReloj) {
+        clearInterval(intervaloReloj);
+        intervaloReloj = null;
+      }
+      animacionActiva = false;
+
+      const btnAnimar = document.getElementById('btnAnimar');
+      btnAnimar.classList.remove('pausa');
+      btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Continuar caminata</span>';
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA FORMATEAR EL RELOJ (HH:MM:SS)
+    // =========================================================
+    function formatearReloj(segundos) {
+      const h = Math.floor(segundos / 3600);
+      const m = Math.floor((segundos % 3600) / 60);
+      const s = Math.floor(segundos % 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA INICIAR LA ANIMACIÓN
+    // =========================================================
+    function iniciarAnimacion() {
+      if (coordenadasRuta.length === 0) {
+        if (actividadActual === 'campamento') {
+          alert('⛺ La ruta del campamento aún no tiene coordenadas configuradas.');
+        } else {
+          alert('Espera a que se cargue la ruta primero.');
+        }
+        return;
+      }
+
+      if (indiceAnimacion >= coordenadasRuta.length) {
+        indiceAnimacion = 0;
+        tiempoTranscurrido = 0;
+      }
+
+      if (!marcadorCaminante) {
+        const iconoCaminante = L.divIcon({
+          className: "",
+          html: '<div class="caminante-icono">🚶‍♂️</div>',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+
+        marcadorCaminante = L.marker(coordenadasRuta[indiceAnimacion], {
+          icon: iconoCaminante,
+          zIndexOffset: 1000
+        }).addTo(mapa);
+      }
+
+      animacionActiva = true;
+
+      const btnAnimar = document.getElementById('btnAnimar');
+      btnAnimar.classList.add('pausa');
+      btnAnimar.innerHTML = '⏸️ <span id="textoAnimar">Pausar caminata</span>';
+
+      const factorAceleracion = 30;
+      const duracionTotalMs = (tiempoEstimadoTotal * 1000) / factorAceleracion;
+      const intervaloPaso = Math.max(30, duracionTotalMs / coordenadasRuta.length);
+
+      intervaloReloj = setInterval(() => {
+        tiempoTranscurrido += 0.1 * factorAceleracion;
+        if (tiempoTranscurrido > tiempoEstimadoTotal) {
+          tiempoTranscurrido = tiempoEstimadoTotal;
+        }
+      }, 100);
+
+      intervaloAnimacion = setInterval(() => {
+        if (indiceAnimacion < coordenadasRuta.length) {
+          marcadorCaminante.setLatLng(coordenadasRuta[indiceAnimacion]);
+          mapa.panTo(coordenadasRuta[indiceAnimacion], { animate: true, duration: 0.3 });
+          indiceAnimacion++;
+        } else {
+          detenerAnimacion();
+          const btnAnimar = document.getElementById('btnAnimar');
+          btnAnimar.innerHTML = '🔄 <span id="textoAnimar">Reiniciar caminata</span>';
+        }
+      }, intervaloPaso);
+    }
+
+    // =========================================================
+    // FUNCIÓN PARA CARGAR LA RUTA
+    // =========================================================
+    function cargarRuta(tipo) {
+      detenerAnimacion();
+
+      if (rutaActual) {
+        mapa.removeControl(rutaActual);
+        rutaActual = null;
+      }
+
+      const btnIda = document.getElementById('btnIda');
+      const btnRetorno = document.getElementById('btnRetorno');
+
+      if (tipo === 'ida') {
+        btnIda.classList.remove('inactivo');
+        btnIda.classList.add('activo');
+        btnRetorno.classList.remove('activo');
+        btnRetorno.classList.add('inactivo');
+      } else {
+        btnRetorno.classList.remove('inactivo');
+        btnRetorno.classList.add('activo');
+        btnIda.classList.remove('activo');
+        btnIda.classList.add('inactivo');
+      }
+
+      tipoActual = tipo;
+
+      // Seleccionar waypoints según actividad y tipo
+      let waypoints;
+      if (actividadActual === 'fullday') {
+        waypoints = (tipo === 'ida') ? waypointsFulldayIda : waypointsFulldayRetorno;
+      } else {
+        waypoints = (tipo === 'ida') ? waypointsCampamentoIda : waypointsCampamentoRetorno;
+      }
+
+      // Verificar si hay waypoints para el campamento
+      if (actividadActual === 'campamento' && waypoints.length === 0) {
+        document.getElementById('distanciaRuta').innerHTML = `🚶 Distancia: -- km`;
+        document.getElementById('tiempoRuta').innerHTML = `⏰ Tiempo: -- min`;
+        return;
+      }
+
+      const color = (tipo === 'ida') ? '#1565c0' : '#e65100';
+
+      rutaActual = L.Routing.control({
+        waypoints: waypoints,
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: false,
+        show: false,
+        createMarker: function() { return null; },
+        lineOptions: {
+          styles: [{ color: color, weight: 7, opacity: 1 }],
+          extendToWaypoints: true,
+          missingRouteTolerance: 50
+        }
+      }).addTo(mapa);
+
+      rutaActual.on('routesfound', function(e) {
+        const ruta = e.routes[0];
+        coordenadasRuta = ruta.coordinates;
+        distanciaTotal = ruta.summary.totalDistance;
+
+        const distanciaKm = (distanciaTotal / 1000).toFixed(2);
+        const tiempoMin = tiemposReales[actividadActual][tipo];
+        tiempoEstimadoTotal = tiempoMin * 60;
+
+        let tiempoTexto;
+        if (tiempoMin >= 60) {
+          const horas = Math.floor(tiempoMin / 60);
+          const minutos = tiempoMin % 60;
+          tiempoTexto = `${horas}h ${minutos}min`;
+        } else {
+          tiempoTexto = `${tiempoMin} min`;
+        }
+
+        document.getElementById('distanciaRuta').innerHTML = `🚶 Distancia: ${distanciaKm} km`;
+        document.getElementById('tiempoRuta').innerHTML = `⏰ Tiempo: ${tiempoTexto}`;
+      });
+    }
+
+    // Cargar ruta de ida por defecto
+    cargarRuta('ida');
+
+    // =========================================================
+    // LEYENDA
+    // =========================================================
+    const leyenda = L.control({ position: 'bottomright' });
+
+    leyenda.onAdd = function () {
+      const div = L.DomUtil.create('div', 'leyenda');
+
+      div.innerHTML = `
+        <h4>Leyenda</h4>
+        <div class="item-leyenda">
+          <span class="mini-marcador mini-redoma"></span>
+          <span>Redoma Los Curos</span>
+        </div>
+        <div class="item-leyenda">
+          <span class="mini-marcador mini-inicio"></span>
+          <span>Punto de partida</span>
+        </div>
+        <div class="item-leyenda">
+          <span class="mini-marcador mini-parada"></span>
+          <span>Paradas</span>
+        </div>
+        <div class="item-leyenda">
+          <span class="mini-marcador mini-destino"></span>
+          <span>Destino final</span>
+        </div>
+        <div class="item-leyenda">
+          <span class="linea-ruta"></span>
+          <span id="texto-linea">Ruta de ida</span>
+        </div>
+      `;
+
+      return div;
+    };
+
+    leyenda.addTo(mapa);
+
+    function actualizarLeyenda() {
+      const textoLinea = document.getElementById('texto-linea');
+      const lineaRuta = document.querySelector('.linea-ruta');
+      if (textoLinea && lineaRuta) {
+        textoLinea.textContent = (tipoActual === 'ida') ? 'Ruta de ida' : 'Ruta de retorno';
+        lineaRuta.style.background = (tipoActual === 'ida') ? '#1565c0' : '#e65100';
+      }
+    }
+
+    const observer = new MutationObserver(actualizarLeyenda);
+    observer.observe(document.getElementById('btnIda'), { attributes: true });
+    observer.observe(document.getElementById('btnRetorno'), { attributes: true });
+  </script>
+
+</body>
+</html>
