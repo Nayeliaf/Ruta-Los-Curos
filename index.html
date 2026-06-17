@@ -288,9 +288,21 @@
       animation: caminar 0.5s infinite alternate;
     }
 
+    /* Carro animado */
+    .carro-icono {
+      font-size: 28px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      animation: manejar 0.3s infinite alternate;
+    }
+
     @keyframes caminar {
       from { transform: translateY(0); }
       to { transform: translateY(-3px); }
+    }
+
+    @keyframes manejar {
+      from { transform: translateX(-2px); }
+      to { transform: translateX(2px); }
     }
 
     /* Ajustes para teléfonos */
@@ -421,8 +433,32 @@
     const iconoDestino = crearIcono("destino", "F");
     const iconoRedoma = crearIcono("redoma", "R");
 
-    // PARADAS (siempre visibles en el mapa)
-    const puntos = [
+    // =========================================================
+    // PUNTOS COMUNES (siempre visibles: Redoma y Destino)
+    // =========================================================
+    const puntosComunes = [
+      {
+        tipo: "Referencia",
+        nombre: "Redoma Los Curos",
+        coords: [8.579413, -71.209207],
+        foto: "redoma.png",
+        informacion: "Redoma principal de acceso al sector Los Curos.",
+        icono: iconoRedoma
+      },
+      {
+        tipo: "Destino final",
+        nombre: "Destino de la ruta",
+        coords: [8.588568, -71.217969],
+        foto: "destino.png",
+        informacion: "Punto final del recorrido eco-cultural.",
+        icono: iconoDestino
+      }
+    ];
+
+    // =========================================================
+    // MARCADORES SOLO PARA FULDAY (Inicio + Paradas)
+    // =========================================================
+    const marcadoresFullday = [
       {
         tipo: "Punto de partida",
         nombre: "Inicio de la ruta",
@@ -430,14 +466,6 @@
         foto: "inicio.png",
         informacion: "Punto de inicio del recorrido eco-cultural por Los Curos.",
         icono: iconoInicio
-      },
-      {
-        tipo: "Referencia",
-        nombre: "Redoma Los Curos",
-        coords: [8.579476, -71.209174],
-        foto: "redoma.png",
-        informacion: "Redoma principal de acceso al sector Los Curos.",
-        icono: iconoRedoma
       },
       {
         tipo: "Parada 1",
@@ -470,19 +498,14 @@
         foto: "parapente.png",
         informacion: "Cuarta parada del recorrido.",
         icono: iconoParada4
-      },
-      {
-        tipo: "Destino final",
-        nombre: "Destino de la ruta",
-        coords: [8.588486, -71.217869],
-        foto: "destino.png",
-        informacion: "Punto final del recorrido eco-cultural.",
-        icono: iconoDestino
       }
     ];
 
-    // Crear marcadores de paradas
-    puntos.forEach((punto) => {
+    // Array para guardar los marcadores del Fullday (para poder ocultarlos)
+    let marcadoresFulldayActivos = [];
+
+    // Crear marcadores comunes (siempre visibles)
+    puntosComunes.forEach((punto) => {
       const popupHTML = `
         <div class="popup-info">
           <h3>${punto.tipo}: ${punto.nombre}</h3>
@@ -498,8 +521,43 @@
         .bindPopup(popupHTML, { maxWidth: 300 });
     });
 
+    // Función para mostrar los marcadores del Fullday
+    function mostrarMarcadoresFullday() {
+      // Si ya existen, no hacer nada
+      if (marcadoresFulldayActivos.length > 0) return;
+
+      marcadoresFullday.forEach((punto) => {
+        const popupHTML = `
+          <div class="popup-info">
+            <h3>${punto.tipo}: ${punto.nombre}</h3>
+            ${punto.foto ? `<img class="foto-popup" src="${punto.foto}" alt="Foto de ${punto.nombre}" onerror="this.style.display='none'">` : ''}
+            <p><strong>Ubicación:</strong> Mérida, Venezuela · Sector Los Curos</p>
+            <p><strong>Coordenadas:</strong> ${punto.coords[0]}, ${punto.coords[1]}</p>
+            <p><strong>Información:</strong> ${punto.informacion}</p>
+          </div>
+        `;
+
+        const marcador = L.marker(punto.coords, { icon: punto.icono })
+          .addTo(mapa)
+          .bindPopup(popupHTML, { maxWidth: 300 });
+        
+        marcadoresFulldayActivos.push(marcador);
+      });
+    }
+
+    // Función para ocultar los marcadores del Fullday
+    function ocultarMarcadoresFullday() {
+      marcadoresFulldayActivos.forEach(marcador => {
+        mapa.removeLayer(marcador);
+      });
+      marcadoresFulldayActivos = [];
+    }
+
+    // Mostrar marcadores del Fullday por defecto
+    mostrarMarcadoresFullday();
+
     // =========================================================
-    // 🏞️ RUTAS FULlDAY
+    // 🏞️ RUTAS FULlDAY (Caminando)
     // =========================================================
     const waypointsFulldayIda = [
       L.latLng(8.578652, -71.209507),  // Inicio
@@ -507,11 +565,11 @@
       L.latLng(8.575239, -71.210965),  // Parada 2 Café
       L.latLng(8.573584, -71.211244),  // Parada 3 Escuela
       L.latLng(8.582769, -71.218238),  // Parada 4 Parapente
-      L.latLng(8.588486, -71.217869)   // Destino
+      L.latLng(8.588568, -71.217969)   // Destino
     ];
 
     const waypointsFulldayRetorno = [
-      L.latLng(8.588486, -71.217869),  // destino de la ruta
+      L.latLng(8.588568, -71.217969),  // destino de la ruta
       L.latLng(8.582769, -71.218238),  // Parada 4 parapente
       L.latLng(8.578218, -71.220877),  // punto intermedio
       L.latLng(8.576751, -71.220713),  // punto intermedio
@@ -524,22 +582,26 @@
       L.latLng(8.575239, -71.210965),  // Parada 2 café
       L.latLng(8.576872, -71.210396),  // Parada 1 virgen
       L.latLng(8.578652, -71.209507),  // inicio de la ruta
-      L.latLng(8.579476, -71.209174)   // redoma los curos
+      L.latLng(8.579413, -71.209207)   // redoma los curos
     ];
 
     // =========================================================
-    // ⛺ RUTAS CAMPAMENTO (REEMPLAZAR CON TUS COORDENADAS)
+    // ⛺ RUTAS CAMPAMENTO (En carro - vía Loma de los Ángeles)
     // =========================================================
     const waypointsCampamentoIda = [
-      // L.latLng(LAT, LNG),  // Punto 1
-      // L.latLng(LAT, LNG),  // Punto 2
-      // L.latLng(LAT, LNG)   // Destino
+      L.latLng(8.579413, -71.209207),  // Redoma Los Curos (inicio)
+      L.latLng(8.570342, -71.208396),  // Punto intermedio 1
+      L.latLng(8.573440, -71.213825),  // Punto intermedio 2
+      L.latLng(8.576771, -71.220906),  // Loma de los Ángeles
+      L.latLng(8.588568, -71.217969)   // Destino
     ];
 
     const waypointsCampamentoRetorno = [
-      // L.latLng(LAT, LNG),  // Destino
-      // L.latLng(LAT, LNG),  // Punto intermedio
-      // L.latLng(LAT, LNG)   // Inicio
+      L.latLng(8.588568, -71.217969),  // Destino
+      L.latLng(8.576771, -71.220906),  // Loma de los Ángeles
+      L.latLng(8.573440, -71.213825),  // Punto intermedio 2
+      L.latLng(8.570342, -71.208396),  // Punto intermedio 1
+      L.latLng(8.579413, -71.209207)   // Redoma Los Curos (fin)
     ];
 
     // =========================================================
@@ -547,12 +609,12 @@
     // =========================================================
     const tiemposReales = {
       fullday: {
-        ida: 150,       // 2h 30min
-        retorno: 45     // 45 min
+        ida: 150,       // 2h 30min (3 km caminando)
+        retorno: 70     // 1h 10min (3.9 km caminando)
       },
       campamento: {
-        ida: 0,         // REEMPLAZAR con tu tiempo real (minutos)
-        retorno: 0      // REEMPLAZAR con tu tiempo real (minutos)
+        ida: 14,        // 14 min en carro (6 km)
+        retorno: 14     // 14 min en carro (6 km)
       }
     };
 
@@ -563,8 +625,8 @@
     let actividadActual = 'fullday';
     let tipoActual = 'ida';
 
-    // Variables para la animación del caminante
-    let marcadorCaminante = null;
+    // Variables para la animación
+    let marcadorVehiculo = null;
     let coordenadasRuta = [];
     let indiceAnimacion = 0;
     let intervaloAnimacion = null;
@@ -583,6 +645,10 @@
       const btnFullday = document.getElementById('btnFullday');
       const btnCampamento = document.getElementById('btnCampamento');
       const tituloPanel = document.getElementById('tituloPanel');
+      const distanciaRuta = document.getElementById('distanciaRuta');
+      const btnAnimar = document.getElementById('btnAnimar');
+
+      detenerAnimacion();
 
       if (actividad === 'fullday') {
         btnFullday.classList.remove('inactivo');
@@ -590,15 +656,24 @@
         btnCampamento.classList.remove('activo');
         btnCampamento.classList.add('inactivo');
         tituloPanel.textContent = '🏞️ Fullday';
+        distanciaRuta.innerHTML = '🚶 Distancia: -- km';
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar caminata</span>';
+        
+        // Mostrar los marcadores del Fullday (Inicio + Paradas)
+        mostrarMarcadoresFullday();
       } else {
         btnCampamento.classList.remove('inactivo');
         btnCampamento.classList.add('activo');
         btnFullday.classList.remove('activo');
         btnFullday.classList.add('inactivo');
         tituloPanel.textContent = '⛺ Campamento';
+        distanciaRuta.innerHTML = '🚗 Distancia: -- km';
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar recorrido</span>';
+        
+        // Ocultar los marcadores del Fullday (Inicio + Paradas)
+        ocultarMarcadoresFullday();
       }
 
-      // Cargar la ruta actual (ida o retorno) de la nueva actividad
       cargarRuta(tipoActual);
     }
 
@@ -614,9 +689,9 @@
         clearInterval(intervaloReloj);
         intervaloReloj = null;
       }
-      if (marcadorCaminante) {
-        mapa.removeLayer(marcadorCaminante);
-        marcadorCaminante = null;
+      if (marcadorVehiculo) {
+        mapa.removeLayer(marcadorVehiculo);
+        marcadorVehiculo = null;
       }
       animacionActiva = false;
       indiceAnimacion = 0;
@@ -624,7 +699,12 @@
 
       const btnAnimar = document.getElementById('btnAnimar');
       btnAnimar.classList.remove('pausa');
-      btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar caminata</span>';
+      
+      if (actividadActual === 'fullday') {
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar caminata</span>';
+      } else {
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Iniciar recorrido</span>';
+      }
     }
 
     // =========================================================
@@ -654,7 +734,12 @@
 
       const btnAnimar = document.getElementById('btnAnimar');
       btnAnimar.classList.remove('pausa');
-      btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Continuar caminata</span>';
+      
+      if (actividadActual === 'fullday') {
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Continuar caminata</span>';
+      } else {
+        btnAnimar.innerHTML = '▶️ <span id="textoAnimar">Continuar recorrido</span>';
+      }
     }
 
     // =========================================================
@@ -672,11 +757,7 @@
     // =========================================================
     function iniciarAnimacion() {
       if (coordenadasRuta.length === 0) {
-        if (actividadActual === 'campamento') {
-          alert('⛺ La ruta del campamento aún no tiene coordenadas configuradas.');
-        } else {
-          alert('Espera a que se cargue la ruta primero.');
-        }
+        alert('Espera a que se cargue la ruta primero.');
         return;
       }
 
@@ -685,16 +766,21 @@
         tiempoTranscurrido = 0;
       }
 
-      if (!marcadorCaminante) {
-        const iconoCaminante = L.divIcon({
+      if (!marcadorVehiculo) {
+        // Elegir icono según la actividad
+        const esCarro = actividadActual === 'campamento';
+        const claseIcono = esCarro ? 'carro-icono' : 'caminante-icono';
+        const emoji = esCarro ? '🚗' : '🚶‍♂️';
+
+        const iconoVehiculo = L.divIcon({
           className: "",
-          html: '<div class="caminante-icono">🚶‍♂️</div>',
+          html: `<div class="${claseIcono}">${emoji}</div>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15]
         });
 
-        marcadorCaminante = L.marker(coordenadasRuta[indiceAnimacion], {
-          icon: iconoCaminante,
+        marcadorVehiculo = L.marker(coordenadasRuta[indiceAnimacion], {
+          icon: iconoVehiculo,
           zIndexOffset: 1000
         }).addTo(mapa);
       }
@@ -703,9 +789,15 @@
 
       const btnAnimar = document.getElementById('btnAnimar');
       btnAnimar.classList.add('pausa');
-      btnAnimar.innerHTML = '⏸️ <span id="textoAnimar">Pausar caminata</span>';
+      
+      if (actividadActual === 'fullday') {
+        btnAnimar.innerHTML = '⏸️ <span id="textoAnimar">Pausar caminata</span>';
+      } else {
+        btnAnimar.innerHTML = '⏸️ <span id="textoAnimar">Pausar recorrido</span>';
+      }
 
-      const factorAceleracion = 30;
+      // Aceleración diferente según actividad
+      const factorAceleracion = actividadActual === 'campamento' ? 60 : 30;
       const duracionTotalMs = (tiempoEstimadoTotal * 1000) / factorAceleracion;
       const intervaloPaso = Math.max(30, duracionTotalMs / coordenadasRuta.length);
 
@@ -718,13 +810,17 @@
 
       intervaloAnimacion = setInterval(() => {
         if (indiceAnimacion < coordenadasRuta.length) {
-          marcadorCaminante.setLatLng(coordenadasRuta[indiceAnimacion]);
+          marcadorVehiculo.setLatLng(coordenadasRuta[indiceAnimacion]);
           mapa.panTo(coordenadasRuta[indiceAnimacion], { animate: true, duration: 0.3 });
           indiceAnimacion++;
         } else {
           detenerAnimacion();
           const btnAnimar = document.getElementById('btnAnimar');
-          btnAnimar.innerHTML = '🔄 <span id="textoAnimar">Reiniciar caminata</span>';
+          if (actividadActual === 'fullday') {
+            btnAnimar.innerHTML = '🔄 <span id="textoAnimar">Reiniciar caminata</span>';
+          } else {
+            btnAnimar.innerHTML = '🔄 <span id="textoAnimar">Reiniciar recorrido</span>';
+          }
         }
       }, intervaloPaso);
     }
@@ -765,19 +861,16 @@
         waypoints = (tipo === 'ida') ? waypointsCampamentoIda : waypointsCampamentoRetorno;
       }
 
-      // Verificar si hay waypoints para el campamento
-      if (actividadActual === 'campamento' && waypoints.length === 0) {
-        document.getElementById('distanciaRuta').innerHTML = `🚶 Distancia: -- km`;
-        document.getElementById('tiempoRuta').innerHTML = `⏰ Tiempo: -- min`;
-        return;
-      }
-
       const color = (tipo === 'ida') ? '#1565c0' : '#e65100';
+
+      // 🚗 Elegir perfil de OSRM según la actividad
+      const perfilOSRM = (actividadActual === 'campamento') ? 'car' : 'foot';
 
       rutaActual = L.Routing.control({
         waypoints: waypoints,
         router: L.Routing.osrmv1({
-          serviceUrl: 'https://router.project-osrm.org/route/v1'
+          serviceUrl: 'https://router.project-osrm.org/route/v1',
+          profile: perfilOSRM
         }),
         routeWhileDragging: false,
         addWaypoints: false,
@@ -810,7 +903,9 @@
           tiempoTexto = `${tiempoMin} min`;
         }
 
-        document.getElementById('distanciaRuta').innerHTML = `🚶 Distancia: ${distanciaKm} km`;
+        // Actualizar panel con icono correcto según actividad
+        const iconoDistancia = (actividadActual === 'campamento') ? '🚗' : '🚶';
+        document.getElementById('distanciaRuta').innerHTML = `${iconoDistancia} Distancia: ${distanciaKm} km`;
         document.getElementById('tiempoRuta').innerHTML = `⏰ Tiempo: ${tiempoTexto}`;
       });
     }
